@@ -1,0 +1,101 @@
+name: Bug report
+description: Something doesn't work as it should.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Issues are **public**. Never paste your recovery phrase, identity
+        keys, vouchers, invite codes, quest secrets or proof content, and redact them from logs
+        and screenshots. Security problems go to a [private report](https://github.com/onlyashd/quests/security/advisories/new) instead.
+
+  - type: dropdown
+    id: target
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - Android app
+        - iOS app
+        - Server
+        - Redeemer (points counter)
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: App version (in the app, Settings → Version) or server release tag.
+      placeholder: 0.2.0-android
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Device and OS
+      description: For app bugs. How the app was installed helps too (F-Droid, APK, AltStore, SideStore).
+      placeholder: Pixel 9a, Android 17, F-Droid
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role
+      options:
+        - Participant
+        - Leader
+        - Admin
+        - Not applicable
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the quest list
+        2. Claim a quest
+        3. Submit a photo proof
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: Redacted. Pasted text is shown as code automatically.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots (redacted), how often it happens, whether it started after an update.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this hasn't been reported.
+          required: true
+        - label: This report contains no secrets, keys, vouchers, invite codes or proof content.
+          required: true

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Rejects commits whose message is not a Conventional Commit (.cicd/check-commit-msg.sh).
+# Enable once per clone: bash .cicd/install-hooks.sh   ·   bypass: git commit --no-verify
+# (the pull-request workflow runs the same check, so bypassed commits still get caught).
+exec bash "$(git rev-parse --show-toplevel)/.cicd/check-commit-msg.sh" --file "$1"

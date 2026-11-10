@@ -1,0 +1,8 @@
+# Per-file attributes only. Repository settings such as `pull.rebase` are git config, which
+# a repository cannot ship: `bash .cicd/install-hooks.sh` sets them in each clone.
+#
+# Shell scripts and git hooks must keep LF endings, or bash fails on Windows checkouts.
+*.sh        text eol=lf
+.githooks/* text eol=lf
+gradlew     text eol=lf
+*.bat       text eol=crlf

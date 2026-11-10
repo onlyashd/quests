@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Rejects pushes to branches whose name is not a Conventional Branch (.cicd/check-branch-name.sh).
+# Enable once per clone: bash .cicd/install-hooks.sh   ·   bypass: git push --no-verify
+# (the pull-request workflow runs the same check, so bypassed branches still get caught).
+set -euo pipefail
+
+check="$(git rev-parse --show-toplevel)/.cicd/check-branch-name.sh"
+status=0
+
+# stdin: one "<local ref> <local sha> <remote ref> <remote sha>" line per ref being pushed.
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in refs/heads/*) ;; *) continue ;; esac # tags, notes, ...
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac        # all zeros: branch deletion
+  bash "$check" "${remote_ref#refs/heads/}" || status=1
+done
+
+exit $status

@@ -1,0 +1,95 @@
+# iOS release build. Called by release.yml; not triggered on its own.
+# Produces an UNSIGNED .ipa: AltStore / SideStore re-sign on install (app spec §10).
+
+name: iOS release build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version being released (already written to versions.properties)
+        type: string
+        required: true
+      versions-artifact:
+        description: Artifact holding the bumped versions.properties
+        type: string
+        required: true
+    outputs:
+      artifact:
+        description: Name of the uploaded artifact
+        value: ${{ jobs.build.outputs.artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test & build
+    runs-on: macos-26
+    timeout-minutes: 60
+    outputs:
+      artifact: release-ios
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Use bumped versions.properties
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.versions-artifact }}
+          path: .
+
+      - name: Check version
+        run: grep -qx "ios=$VERSION" versions.properties
+
+      # The Xcode build phase runs Gradle to build the Kotlin `Shared` framework.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Test shared logic on the iOS simulator
+        run: ./gradlew :protocol:iosSimulatorArm64Test :shared:iosSimulatorArm64Test
+
+      - name: Build app (unsigned)
+        run: |
+          set -euo pipefail
+          # CFBundleShortVersionString must be numeric: the pre-release suffix lives in the
+          # tag and the release name; the run number keeps CFBundleVersion increasing.
+          marketing="${VERSION%%-*}"
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -target iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$RUNNER_TEMP/xcode" \
+            MARKETING_VERSION="$marketing" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package .ipa
+        run: |
+          set -euo pipefail
+          app="$RUNNER_TEMP/xcode/Release-iphoneos/FERA Quests.app"
+          [ -d "$app" ] || { echo "::error::$app not found"; ls -R "$RUNNER_TEMP/xcode" | head -50; exit 1; }
+          stage="$RUNNER_TEMP/ipa"
+          mkdir -p "$stage/Payload" out
+          cp -R "$app" "$stage/Payload/"
+          name="fera-quests-ios-$VERSION-unsigned.ipa"
+          (cd "$stage" && zip -qry "$GITHUB_WORKSPACE/out/$name" Payload)
+          (cd out && shasum -a 256 "$name" > "$name.sha256")
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14

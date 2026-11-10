@@ -1,0 +1,209 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } }
+      }
+    },
+    "error.generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Something went wrong. Please try again." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Algo deu errado. Tente novamente." } }
+      }
+    },
+    "leader.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leader tools will appear here once your leader key is authorized." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "As ferramentas de líder aparecerão aqui quando sua chave de líder for autorizada." } }
+      }
+    },
+    "mine.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You have not claimed any quests yet." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Você ainda não pegou nenhuma missão." } }
+      }
+    },
+    "ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
+      }
+    },
+    "quests.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No quests yet. The feed will appear here." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ainda não há missões. O feed aparecerá aqui." } }
+      }
+    },
+    "settings.leader_mode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leader mode" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Modo líder" } }
+      }
+    },
+    "settings.leader_mode.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shows leader tools. Admins must authorize your leader key first." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mostra as ferramentas de líder. Os administradores precisam autorizar sua chave de líder antes." } }
+      }
+    },
+    "settings.theme" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Theme" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Tema" } }
+      }
+    },
+    "settings.wipe" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Wipe identity" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar identidade" } }
+      }
+    },
+    "settings.version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Versão" } }
+      }
+    },
+    "tab.leader" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leader" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Líder" } }
+      }
+    },
+    "tab.mine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "My quests" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Minhas missões" } }
+      }
+    },
+    "tab.quests" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quests" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Missões" } }
+      }
+    },
+    "tab.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } }
+      }
+    },
+    "tab.wallet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Wallet" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Carteira" } }
+      }
+    },
+    "theme.dark" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dark" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Escuro" } }
+      }
+    },
+    "theme.light" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Light" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Claro" } }
+      }
+    },
+    "theme.system" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sistema" } }
+      }
+    },
+    "wallet.balance.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Points" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pontos" } }
+      }
+    },
+    "welcome.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "There is no account, email or phone number. Your identity is a set of 24 words that only you hold. If you lose them, you lose your points." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não há conta, e-mail nem telefone. Sua identidade é um conjunto de 24 palavras que só você tem. Se perdê-las, você perde seus pontos." } }
+      }
+    },
+    "welcome.create" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create identity" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Criar identidade" } }
+      }
+    },
+    "welcome.restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore identity" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Restaurar identidade" } }
+      }
+    },
+    "welcome.restore.soon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restoring from your 24 words is coming soon." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A restauração pelas 24 palavras chega em breve." } }
+      }
+    },
+    "welcome.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to FERA Quests" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Bem-vindo ao FERA Quests" } }
+      }
+    },
+    "wipe.body %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This deletes your identity and all local data from this device. Without your 24 words it cannot be recovered. Type %@ to confirm." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Isso apaga sua identidade e todos os dados locais deste aparelho. Sem suas 24 palavras, não é possível recuperá-la. Digite %@ para confirmar." } }
+      }
+    },
+    "wipe.confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Wipe" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar" } }
+      }
+    },
+    "wipe.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Wipe identity?" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Apagar identidade?" } }
+      }
+    },
+    "wipe.word" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "WIPE" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "APAGAR" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

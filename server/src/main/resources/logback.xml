@@ -1,0 +1,24 @@
+<!--
+  backend.md §1 rule 2 / §9 S1: no identity-bearing logs. No access log, no MDC,
+  no request bodies. Netty and the HTTP stack are kept at WARN so nothing logs
+  connection details.
+-->
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="io.netty" level="WARN"/>
+    <logger name="io.ktor" level="WARN"/>
+    <logger name="io.minio" level="WARN"/>
+    <logger name="okhttp3" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+    <logger name="org.flywaydb" level="INFO"/>
+    <logger name="Exposed" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

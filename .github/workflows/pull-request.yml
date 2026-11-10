@@ -1,0 +1,90 @@
+# Conventions check for pull requests: the same rules as the local hooks (.githooks/),
+# so commits made with --no-verify are still caught.
+#
+# - branch name     Conventional Branch   (.cicd/check-branch-name.sh)
+# - PR title        Conventional Commit   (.cicd/check-commit-msg.sh; it becomes the squash-merge subject)
+# - every commit    Conventional Commit   (base..head of the PR)
+#
+# The check scripts are taken from the BASE branch, so a pull request cannot relax the rules
+# it is checked against. Changes to the scripts apply once merged.
+
+name: Pull request
+
+on:
+  pull_request:
+    # edited: title or base branch changed; synchronize: new commits pushed.
+    types: [opened, edited, reopened, synchronize]
+
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  conventions:
+    name: Conventions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 # the base..head range needs both histories
+          persist-credentials: false
+
+      - name: Checkout rules from base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .rules
+          sparse-checkout: .cicd
+          persist-credentials: false
+
+      - name: Pick check scripts
+        run: |
+          set -euo pipefail
+          if [ -f .rules/.cicd/check-commit-msg.sh ] && [ -f .rules/.cicd/check-branch-name.sh ]; then
+            echo "RULES=$GITHUB_WORKSPACE/.rules/.cicd" >> "$GITHUB_ENV"
+          else
+            # Bootstrapping: the base branch does not have the scripts yet.
+            echo "::warning::Base branch has no check scripts; using the pull request's own."
+            echo "RULES=$GITHUB_WORKSPACE/.cicd" >> "$GITHUB_ENV"
+          fi
+
+      - name: Branch name
+        if: ${{ !cancelled() }}
+        run: |
+          if ! bash "$RULES/check-branch-name.sh" "$HEAD_REF" 2> err.txt; then
+            cat err.txt >&2
+            echo "::error title=Branch name::'$HEAD_REF' is not a Conventional Branch name (e.g. feature/voucher-retry). Rename the branch and reopen the PR."
+            exit 1
+          fi
+          echo "Branch '$HEAD_REF' ok"
+
+      - name: Pull request title
+        if: ${{ !cancelled() }}
+        run: |
+          if ! bash "$RULES/check-commit-msg.sh" --message "$PR_TITLE" 2> err.txt; then
+            cat err.txt >&2
+            echo "::error title=Pull request title::The title becomes the squash-merge commit; make it a Conventional Commit (e.g. 'feat(sync): retry vouchers on 503')."
+            exit 1
+          fi
+          echo "Title ok"
+
+      - name: Commit messages
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          if ! bash "$RULES/check-commit-msg.sh" --range "$BASE_SHA..$HEAD_SHA" 2>&1 | tee out.txt; then
+            grep -E '^check-commit-msg: commit [0-9a-f]+:' out.txt \
+              | sed -E 's/^check-commit-msg: (commit [0-9a-f]+): (.*)$/::error title=\1::\2/' || true
+            exit 1
+          fi

@@ -1,0 +1,113 @@
+# Local development stack (backend.md §10). NOT a production configuration.
+#
+#   ./gradlew :server:installDist :redeemer:installDist
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# :server and :redeemer live on separate networks with separate databases (§8):
+# the redeemer shares no database, network segment or logs with :server.
+# The dev OHTTP relay arrives with the gateway in milestone B1.
+
+name: fera-quests
+
+x-postgres-privacy: &postgres-privacy
+  # §9 S1: no connection or statement logging.
+  command:
+    - postgres
+    - -c
+    - log_connections=off
+    - -c
+    - log_disconnections=off
+    - -c
+    - log_statement=none
+    - -c
+    - log_min_error_statement=panic
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    <<: *postgres-privacy
+    environment:
+      POSTGRES_DB: quests
+      POSTGRES_USER: quests
+      POSTGRES_PASSWORD: quests
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quests -d quests"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    # Official minio/minio images are no longer published on Docker Hub; override as needed.
+    image: ${MINIO_IMAGE:-pgsty/minio:RELEASE.2026-08-04T00-00-00Z}
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BROWSER: "off"
+    volumes: [minio-data:/data]
+    networks: [backend]          # internal only: no published ports
+
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio: { condition: service_started }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/quests
+      DB_USER: quests
+      DB_PASSWORD: quests
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: artifacts
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      ISSUER_NAME: quests.fera
+    ports:
+      - "8080:8080"              # outer /ohttp
+      - "127.0.0.1:9090:9090"    # health/metrics, loopback only
+    networks: [backend]
+
+  redeemer-postgres:
+    image: postgres:16-alpine
+    <<: *postgres-privacy
+    environment:
+      POSTGRES_DB: redeemer
+      POSTGRES_USER: redeemer
+      POSTGRES_PASSWORD: redeemer
+    volumes: [redeemer-postgres-data:/var/lib/postgresql/data]
+    networks: [redeemer]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redeemer -d redeemer"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redeemer:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.redeemer
+    depends_on:
+      redeemer-postgres: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://redeemer-postgres:5432/redeemer
+      DB_USER: redeemer
+      DB_PASSWORD: redeemer
+      # Reached via the published port, not a shared network (§8).
+      SERVER_URL: http://host.docker.internal:8080
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports:
+      - "8081:8081"
+      - "127.0.0.1:9091:9091"
+    networks: [redeemer]
+
+networks:
+  backend: {}
+  redeemer: {}
+
+volumes:
+  postgres-data: {}
+  minio-data: {}
+  redeemer-postgres-data: {}

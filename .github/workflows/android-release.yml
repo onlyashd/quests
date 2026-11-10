@@ -1,0 +1,76 @@
+# Android release build. Called by release.yml; not triggered on its own.
+# Produces an UNSIGNED release APK: the signing key stays offline (app spec §10).
+
+name: Android release build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version being released (already written to versions.properties)
+        type: string
+        required: true
+      versions-artifact:
+        description: Artifact holding the bumped versions.properties
+        type: string
+        required: true
+    outputs:
+      artifact:
+        description: Name of the uploaded artifact
+        value: ${{ jobs.build.outputs.artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test & assemble
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      artifact: release-android
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Use bumped versions.properties
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.versions-artifact }}
+          path: .
+
+      - name: Check version
+        run: grep -qx "android=$VERSION" versions.properties
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Test shared logic
+        run: ./gradlew :protocol:jvmTest :protocol:testAndroidHostTest :shared:testAndroidHostTest
+
+      - name: Assemble release APK
+        run: ./gradlew :androidApp:assembleRelease
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          apk="androidApp/build/outputs/apk/release/androidApp-release-unsigned.apk"
+          [ -f "$apk" ] || { echo "::error::$apk not found"; ls -R androidApp/build/outputs/apk; exit 1; }
+          name="fera-quests-android-$VERSION-unsigned.apk"
+          cp "$apk" "out/$name"
+          (cd out && sha256sum "$name" > "$name.sha256")
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,315 @@
+# Release entrypoint.
+#
+# 1. prepare  — bumps the selected target(s) in versions.properties (.cicd/bump-version.sh)
+#               and checks that the new tags don't exist yet. Nothing is pushed here.
+# 2. builds   — calls the platform workflow of each selected target with the new version.
+# 3. publish  — only if every selected build passed: commits versions.properties, tags the
+#               commit as <version>-<target> (final releases also get a CHANGELOG.md section,
+#               .cicd/update-changelog.sh), pushes branch + tags atomically, and opens one
+#               DRAFT GitHub release per tag for human review.
+#
+# The push is refused if the branch moved while the builds ran, so a tag always points at
+# exactly the code that was built. Re-run the workflow from the new branch tip in that case.
+#
+# Branch protection: if the release branch is protected, add a `RELEASE_TOKEN` secret
+# (fine-grained PAT or GitHub App token with contents:write that may bypass the rule).
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target to release
+        type: choice
+        options: [all, android, ios, server]
+        default: all
+        required: true
+      bump-type:
+        description: SemVer bump
+        type: choice
+        options: [patch, minor, major]
+        required: true
+      pre-release:
+        description: Pre-release channel (none = final release)
+        type: choice
+        options: [none, canary, alpha, beta, rc]
+        default: none
+        required: false
+
+# One release at a time: concurrent runs would race on versions.properties.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Bump version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      targets: ${{ steps.bump.outputs.targets }}
+      android_version: ${{ steps.bump.outputs.android_version }}
+      ios_version: ${{ steps.bump.outputs.ios_version }}
+      server_version: ${{ steps.bump.outputs.server_version }}
+    steps:
+      - name: Require a branch
+        if: github.ref_type != 'branch'
+        run: |
+          echo "::error::Run the release from a branch (got ${GITHUB_REF})."
+          exit 1
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Bump versions.properties
+        id: bump
+        env:
+          TARGET: ${{ inputs.target }}
+          BUMP_TYPE: ${{ inputs.bump-type }}
+          PRE_RELEASE: ${{ inputs.pre-release }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+          pre="$PRE_RELEASE"
+          if [ -z "$pre" ] || [ "$pre" = none ]; then pre=false; fi
+          bash .cicd/bump-version.sh --target "$TARGET" --bump-type "$BUMP_TYPE" --pre-release "$pre" > /dev/null
+
+          if [ "$TARGET" = all ]; then targets="android ios server"; else targets="$TARGET"; fi
+          {
+            echo "### Release plan"
+            echo
+            echo "| Target | Version | Tag |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for t in $targets; do
+            version="$(grep "^$t=" versions.properties | cut -d= -f2 | tr -d '\r')"
+            tag="$version-$t"
+            if git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$tag" > /dev/null; then
+              echo "::error::Tag $tag already exists."
+              exit 1
+            fi
+            echo "${t}_version=$version" >> "$GITHUB_OUTPUT"
+            echo "| $t | \`$version\` | \`$tag\` |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "targets=$(printf '%s\n' $targets | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+      - name: Share bumped versions.properties
+        uses: actions/upload-artifact@v7
+        with:
+          name: versions-properties
+          path: versions.properties
+          if-no-files-found: error
+          retention-days: 5
+
+  android:
+    name: Android
+    needs: prepare
+    if: contains(fromJSON(needs.prepare.outputs.targets), 'android')
+    uses: ./.github/workflows/android-release.yml
+    with:
+      version: ${{ needs.prepare.outputs.android_version }}
+      versions-artifact: versions-properties
+
+  ios:
+    name: iOS
+    needs: prepare
+    if: contains(fromJSON(needs.prepare.outputs.targets), 'ios')
+    uses: ./.github/workflows/ios-release.yml
+    with:
+      version: ${{ needs.prepare.outputs.ios_version }}
+      versions-artifact: versions-properties
+
+  server:
+    name: Server
+    needs: prepare
+    if: contains(fromJSON(needs.prepare.outputs.targets), 'server')
+    uses: ./.github/workflows/server-release.yml
+    with:
+      version: ${{ needs.prepare.outputs.server_version }}
+      versions-artifact: versions-properties
+
+  publish:
+    name: Tag & draft release
+    needs: [prepare, android, ios, server]
+    # Skipped targets are fine; any failed or canceled build stops the release.
+    if: >-
+      always()
+      && needs.prepare.result == 'success'
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      TARGETS: ${{ join(fromJSON(needs.prepare.outputs.targets), ' ') }}
+      ANDROID_VERSION: ${{ needs.prepare.outputs.android_version }}
+      IOS_VERSION: ${{ needs.prepare.outputs.ios_version }}
+      SERVER_VERSION: ${{ needs.prepare.outputs.server_version }}
+      BRANCH: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0 # full history + tags for the changelog
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Restore bumped versions.properties
+        uses: actions/download-artifact@v8
+        with:
+          name: versions-properties
+          path: .
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+
+      - name: Commit, tag and push
+        run: |
+          set -euo pipefail
+          version_of() {
+            case "$1" in
+              android) echo "$ANDROID_VERSION" ;;
+              ios) echo "$IOS_VERSION" ;;
+              server) echo "$SERVER_VERSION" ;;
+            esac
+          }
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          subject=""
+          tags=()
+          for t in $TARGETS; do
+            v="$(version_of "$t")"
+            [ -n "$v" ] || { echo "::error::No version for $t"; exit 1; }
+            grep -qx "$t=$v" versions.properties || { echo "::error::versions.properties does not say $t=$v"; exit 1; }
+            ls "dist/release-$t/"* > /dev/null 2>&1 || { echo "::error::No artifacts for $t"; exit 1; }
+            subject="$subject${subject:+, }$t $v"
+            tags+=("$v-$t")
+          done
+
+          # Final releases get a CHANGELOG.md section (pre-releases are skipped by the script).
+          # Run before tagging, so the section lands in the commit the tags point at.
+          for t in $TARGETS; do
+            bash .cicd/update-changelog.sh --tag "$(version_of "$t")-$t" --ref HEAD > /dev/null
+          done
+
+          git add versions.properties CHANGELOG.md
+          git commit -m "chore(release): $subject [skip ci]"
+          for t in $TARGETS; do
+            v="$(version_of "$t")"
+            git tag -a "$v-$t" -m "FERA Quests $t $v"
+          done
+
+          # Atomic: the commit and every tag land together, or nothing does. Not a force push,
+          # so it fails if the branch moved since this run started.
+          git push --atomic origin "HEAD:refs/heads/$BRANCH" "${tags[@]}"
+
+      - name: Create draft releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUMP_TYPE: ${{ inputs.bump-type }}
+          PRE_RELEASE: ${{ inputs.pre-release }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          version_of() {
+            case "$1" in
+              android) echo "$ANDROID_VERSION" ;;
+              ios) echo "$IOS_VERSION" ;;
+              server) echo "$SERVER_VERSION" ;;
+            esac
+          }
+          label_of() {
+            case "$1" in android) echo Android ;; ios) echo iOS ;; server) echo Server ;; esac
+          }
+          # Source paths whose history belongs in each target's changelog
+          # (keep in sync with paths_of in .cicd/update-changelog.sh).
+          paths_of() {
+            case "$1" in
+              android) echo "androidApp shared protocol gradle build.gradle.kts settings.gradle.kts" ;;
+              ios) echo "iosApp shared protocol gradle build.gradle.kts settings.gradle.kts" ;;
+              server) echo "server redeemer protocol deploy gradle build.gradle.kts settings.gradle.kts" ;;
+            esac
+          }
+          install_notes_of() {
+            case "$1" in
+              android) echo "The APK is **unsigned**. Sign it with the offline release key (app spec §10) before publishing to the F-Droid repository or the direct-download page." ;;
+              ios) echo "The IPA is **unsigned**. AltStore / SideStore re-sign it on install; publish it to the AltStore source after review (app spec §10)." ;;
+              server) echo "Contains the \`:server\` and \`:redeemer\` distributions (\`bin/\` + \`lib/\`). Container images are built from them with \`deploy/Dockerfile.*\` (backend spec §10)." ;;
+            esac
+          }
+
+          commit="$(git rev-parse HEAD)"
+          all_tags=""
+          for t in $TARGETS; do all_tags="$all_tags \`$(version_of "$t")-$t\`"; done
+
+          for t in $TARGETS; do
+            v="$(version_of "$t")"
+            tag="$v-$t"
+            prev="$(git tag --list "*-$t" --sort=-creatordate | grep -vxF "$tag" | head -n1 || true)"
+            range="${prev:+$prev..}$tag"
+
+            notes="$RUNNER_TEMP/notes-$t.md"
+            {
+              echo "## FERA Quests $(label_of "$t") $v"
+              echo
+              echo "> Draft created by the release workflow — review the changes and artifacts before publishing."
+              echo
+              echo "| | |"
+              echo "|---|---|"
+              echo "| Target | \`$t\` |"
+              echo "| Version | \`$v\`${prev:+ (previous: \`$prev\`)} |"
+              echo "| Bump | \`$BUMP_TYPE\`${PRE_RELEASE:+, pre-release \`$PRE_RELEASE\`} |"
+              echo "| Commit | \`$commit\` |"
+              echo "| Released together |$all_tags |"
+              echo "| Build | [workflow run]($RUN_URL) |"
+              echo
+              echo "### Changes"
+              echo
+              # shellcheck disable=SC2046
+              changes="$(git log --no-merges --format='- %s (%h)' "$range" -- $(paths_of "$t") | grep -v 'chore(release):' | head -n 100 || true)"
+              if [ -n "$changes" ]; then echo "$changes"; else echo "_No commits touching this target since ${prev:-the beginning}._"; fi
+              echo
+
+              # Pull requests, as GitHub would list them (best effort).
+              args=(-f "tag_name=$tag" -f "target_commitish=$commit")
+              [ -n "$prev" ] && args+=(-f "previous_tag_name=$prev")
+              if prs="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body 2>/dev/null)" && [ -n "$prs" ]; then
+                echo "### Pull requests"
+                echo
+                echo "$prs" | sed 's/^## /#### /'
+                echo
+              fi
+
+              echo "### Artifacts"
+              echo
+              echo "| File | Size | SHA-256 |"
+              echo "|---|---|---|"
+              for f in "dist/release-$t"/*; do
+                case "$f" in *.sha256) continue ;; esac
+                echo "| \`$(basename "$f")\` | $(du -h "$f" | cut -f1) | \`$(sha256sum "$f" | cut -d' ' -f1)\` |"
+              done
+              echo
+              install_notes_of "$t"
+            } > "$notes"
+
+            prerelease=()
+            case "$v" in *-*) prerelease=(--prerelease) ;; esac
+
+            gh release create "$tag" dist/release-"$t"/* \
+              --draft \
+              --verify-tag \
+              --title "FERA Quests $(label_of "$t") $v" \
+              --notes-file "$notes" \
+              "${prerelease[@]}"
+            echo "- $(label_of "$t") \`$tag\`: draft release created" >> "$GITHUB_STEP_SUMMARY"
+          done

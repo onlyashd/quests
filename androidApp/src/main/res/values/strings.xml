@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FERA Quests</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Welcome to FERA Quests</string>
+    <string name="welcome_body">There is no account, email or phone number. Your identity is a set of 24 words that only you hold. If you lose them, you lose your points.</string>
+    <string name="welcome_create">Create identity</string>
+    <string name="welcome_restore">Restore identity</string>
+    <string name="welcome_restore_soon">Restoring from your 24 words is coming soon.</string>
+
+    <!-- Tabs -->
+    <string name="tab_quests">Quests</string>
+    <string name="tab_mine">My quests</string>
+    <string name="tab_wallet">Wallet</string>
+    <string name="tab_leader">Leader</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Empty states -->
+    <string name="quests_empty">No quests yet. The feed will appear here.</string>
+    <string name="mine_empty">You have not claimed any quests yet.</string>
+    <string name="wallet_balance_label">Points</string>
+    <string name="leader_empty">Leader tools will appear here once your leader key is authorized.</string>
+
+    <!-- Settings -->
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_leader_mode">Leader mode</string>
+    <string name="settings_leader_mode_hint">Shows leader tools. Admins must authorize your leader key first.</string>
+    <string name="settings_wipe">Wipe identity</string>
+    <string name="settings_version">Version</string>
+    <string name="wipe_title">Wipe identity?</string>
+    <string name="wipe_body">This deletes your identity and all local data from this device. Without your 24 words it cannot be recovered. Type %1$s to confirm.</string>
+    <string name="wipe_word">WIPE</string>
+    <string name="wipe_confirm">Wipe</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+</resources>

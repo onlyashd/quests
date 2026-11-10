@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FERA Quests</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Bem-vindo ao FERA Quests</string>
+    <string name="welcome_body">Não há conta, email nem telefone. A sua identidade é um conjunto de 24 palavras que só você tem. Se as perder, você perde os seus pontos.</string>
+    <string name="welcome_create">Criar identidade</string>
+    <string name="welcome_restore">Restaurar identidade</string>
+    <string name="welcome_restore_soon">A restauração pelas 24 palavras chega em breve.</string>
+
+    <!-- Tabs -->
+    <string name="tab_quests">Missões</string>
+    <string name="tab_mine">Minhas missões</string>
+    <string name="tab_wallet">Carteira</string>
+    <string name="tab_leader">Líder</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <!-- Empty states -->
+    <string name="quests_empty">Ainda não há missões. O feed aparecerá aqui.</string>
+    <string name="mine_empty">Você ainda não pegou nenhuma missão.</string>
+    <string name="wallet_balance_label">Pontos</string>
+    <string name="leader_empty">As ferramentas de líder aparecerão aqui quando a sua chave de líder for autorizada.</string>
+
+    <!-- Settings -->
+    <string name="settings_theme">Tema</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="settings_leader_mode">Modo líder</string>
+    <string name="settings_leader_mode_hint">Mostra as ferramentas de líder. Os administradores precisam autorizar a sua chave de líder antes.</string>
+    <string name="settings_wipe">Apagar identidade</string>
+    <string name="settings_version">Versão</string>
+    <string name="wipe_title">Apagar identidade?</string>
+    <string name="wipe_body">Isso apaga a sua identidade e todos os dados locais deste aparelho. Sem a suas 24 palavras, não é possível recuperá-la. Digite %1$s para confirmar.</string>
+    <string name="wipe_word">APAGAR</string>
+    <string name="wipe_confirm">Apagar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="error_generic">Algo deu errado. Tente novamente.</string>
+</resources>

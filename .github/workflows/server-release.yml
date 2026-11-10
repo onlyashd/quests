@@ -1,0 +1,97 @@
+# Server release build (:server + :redeemer). Called by release.yml; not triggered on its own.
+# Runs the full backend test suite (Testcontainers uses the runner's Docker) and ships the
+# Gradle distributions. Container images are built to validate the Dockerfiles, not pushed.
+
+name: Server release build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version being released (already written to versions.properties)
+        type: string
+        required: true
+      versions-artifact:
+        description: Artifact holding the bumped versions.properties
+        type: string
+        required: true
+    outputs:
+      artifact:
+        description: Name of the uploaded artifact
+        value: ${{ jobs.build.outputs.artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test & package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      artifact: release-server
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Use bumped versions.properties
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.versions-artifact }}
+          path: .
+
+      - name: Check version
+        run: grep -qx "server=$VERSION" versions.properties
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Test
+        run: ./gradlew :protocol:jvmTest :server:test :redeemer:test
+
+      - name: Fail if integration tests were skipped
+        # Testcontainers tests skip silently without Docker; a release must run them.
+        run: |
+          set -euo pipefail
+          skipped="$(cat server/build/test-results/test/*.xml redeemer/build/test-results/test/*.xml \
+            | grep -o '<testsuite [^>]*' | grep -o 'skipped="[0-9]*"' | tr -dc '0-9\n' \
+            | awk '{ s += $1 } END { print s + 0 }')"
+          if [ "$skipped" != "0" ]; then
+            echo "::error::$skipped backend test(s) were skipped — is Docker available on the runner?"
+            exit 1
+          fi
+
+      - name: Build distributions
+        run: ./gradlew :server:distTar :redeemer:distTar :server:installDist :redeemer:installDist
+
+      - name: Validate container images
+        run: |
+          set -euo pipefail
+          docker build -f deploy/Dockerfile.server -t "fera-quests-server:$VERSION" .
+          docker build -f deploy/Dockerfile.redeemer -t "fera-quests-redeemer:$VERSION" .
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          for m in server redeemer; do
+            tar="$m/build/distributions/$m-$VERSION.tar"
+            [ -f "$tar" ] || { echo "::error::$tar not found"; ls "$m/build/distributions"; exit 1; }
+            name="fera-quests-$m-$VERSION.tar"
+            cp "$tar" "out/$name"
+            (cd out && sha256sum "$name" > "$name.sha256")
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-server
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14

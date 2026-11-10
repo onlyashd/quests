@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/onlyashd/quests/security/advisories/new
+    about: >-
+      Anything that could expose participants (IPs, identities, proof content, links between
+      quests) or forge points. Report it privately, never in a public issue.

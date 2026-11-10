@@ -1,0 +1,29 @@
+name: Other
+description: Questions, documentation, translations, tooling, or anything that isn't a bug or a feature.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are **public**: leave out recovery phrases, keys, vouchers, invite codes and
+        proof content.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Question
+        - Documentation / specs
+        - Translation (en, pt-BR)
+        - Build, CI or tooling
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What would you like to ask, report or discuss? Link files or spec sections if relevant.
+    validations:
+      required: true

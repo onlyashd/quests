@@ -1,0 +1,83 @@
+# CodeQL static analysis: Kotlin/Java (protocol, shared, apps, backend), Swift (iosApp)
+# and the workflows themselves.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "27 4 * * 1" # Mondays 04:27 UTC
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            runner: ubuntu-24.04
+          - language: java-kotlin
+            build-mode: manual
+            runner: ubuntu-24.04
+          - language: swift
+            build-mode: manual
+            runner: macos-26
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - if: matrix.build-mode == 'manual'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - if: matrix.build-mode == 'manual'
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          # CodeQL must observe every compiler invocation: never restore build outputs.
+          cache-disabled: true
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # Kotlin is only traced when compiled in-process (no Kotlin/Gradle daemon, no caches).
+      - name: Build (Kotlin)
+        if: matrix.language == 'java-kotlin'
+        run: >
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache --rerun-tasks
+          -Pkotlin.compiler.execution.strategy=in-process
+          :protocol:compileKotlinJvm :shared:compileAndroidMain
+          :androidApp:compileReleaseKotlin :server:compileKotlin :redeemer:compileKotlin
+
+      - name: Build (Swift)
+        if: matrix.language == 'swift'
+        run: >
+          xcodebuild -project iosApp/iosApp.xcodeproj -target iosApp -configuration Debug
+          -sdk iphonesimulator -arch arm64 SYMROOT="$RUNNER_TEMP/xcode"
+          CODE_SIGNING_ALLOWED=NO build
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
